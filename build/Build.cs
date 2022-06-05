@@ -16,6 +16,13 @@ using static Nuke.Common.EnvironmentInfo;
 using static Nuke.Common.IO.FileSystemTasks;
 using static Nuke.Common.IO.PathConstruction;
 using static Nuke.Common.Tools.DotNet.DotNetTasks;
+using static Nuke.Common.Tools.Docker.DockerTasks;
+using static Nuke.Common.Tools.Helm.HelmTasks;
+using static Nuke.Common.Tools.GitVersion.GitVersionTasks;
+using Nuke.Common.Tools.Docker;
+using Nuke.Common.Tools.Helm;
+using Nuke.Common.Tools.GitVersion;
+using System.Collections.Generic;
 
 [CheckBuildProjectConfigurations]
 class Build : NukeBuild
@@ -35,6 +42,8 @@ class Build : NukeBuild
 
     AbsolutePath OutputDirectory => RootDirectory / "output";
 
+    AbsolutePath HelmDirectory => RootDirectory / "helm";
+
     AbsolutePath ArtifactDirectory => RootDirectory / "artifact";
 
     [Parameter()]
@@ -45,6 +54,12 @@ class Build : NukeBuild
 
     [Parameter]
     public string WebAppName;
+
+    private readonly string Repository = "raulnq/nuke-sandbox-app";
+
+    private string BuildNumber;
+
+    private readonly string ReleaseName = "release-nuke-sandbox-app";
 
     Target Restore => _ => _
         .Executes(() =>
@@ -82,6 +97,49 @@ class Build : NukeBuild
                 .SetOutput(OutputDirectory)
                 .EnableNoRestore()
                 .SetNoBuild(true));
+        });
+
+    Target GetBuildNumber => _ => _
+        .Executes(() =>
+        {
+            var (result, _) = GitVersion();
+            BuildNumber = result.SemVer;
+        });
+
+    Target BuildImage => _ => _
+        .DependsOn(GetBuildNumber)
+        .Executes(() =>
+        {
+            var dockerFile = RootDirectory / "nuke-sandbox-app" / "Dockerfile";
+            var image = $"{Repository}:{BuildNumber}";
+
+            DockerBuild(s => s
+                .SetPath(RootDirectory)
+                .SetFile(dockerFile)
+                .SetTag(image)
+                );
+        });
+
+    Target HelmInstall => _ => _
+        .DependsOn(BuildImage)
+        .Executes(() =>
+        {
+            var chart = HelmDirectory / "nuke-sandbox-app";
+
+            HelmUpgrade(s => s
+                .SetRelease(ReleaseName)
+                .SetSet(new Dictionary<string, object>() { { "image.tag", BuildNumber }, { "image.repository", Repository } })
+                .SetChart(chart)
+                .EnableInstall()
+            );
+        });
+
+    Target HelmUninstall => _ => _
+        .Executes(() =>
+        {
+            HelmDelete(s => s
+            .SetReleaseNames(ReleaseName)
+            );
         });
 
     Target Zip => _ => _
