@@ -79,7 +79,9 @@
               "HelmInstall",
               "HelmUninstall",
               "Publish",
+              "Report",
               "Restore",
+              "Test",
               "Zip"
             ]
           }
@@ -102,7 +104,9 @@
               "HelmInstall",
               "HelmUninstall",
               "Publish",
+              "Report",
               "Restore",
+              "Test",
               "Zip"
             ]
           }

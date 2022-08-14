@@ -19,9 +19,13 @@ using static Nuke.Common.Tools.DotNet.DotNetTasks;
 using static Nuke.Common.Tools.Docker.DockerTasks;
 using static Nuke.Common.Tools.Helm.HelmTasks;
 using static Nuke.Common.Tools.GitVersion.GitVersionTasks;
+using static Nuke.Common.Tools.Coverlet.CoverletTasks;
+using static Nuke.Common.Tools.ReportGenerator.ReportGeneratorTasks;
 using Nuke.Common.Tools.Docker;
 using Nuke.Common.Tools.Helm;
 using Nuke.Common.Tools.GitVersion;
+using Nuke.Common.Tools.Coverlet;
+using Nuke.Common.Tools.ReportGenerator;
 using System.Collections.Generic;
 
 [CheckBuildProjectConfigurations]
@@ -43,6 +47,10 @@ class Build : NukeBuild
     AbsolutePath OutputDirectory => RootDirectory / "output";
 
     AbsolutePath HelmDirectory => RootDirectory / "helm";
+
+    AbsolutePath CoverageDirectory => RootDirectory / "coverage";
+
+    AbsolutePath ReportDirectory => RootDirectory / "report";
 
     AbsolutePath ArtifactDirectory => RootDirectory / "artifact";
 
@@ -172,6 +180,34 @@ class Build : NukeBuild
                     Assert.Fail("Deployment returned status code: " + response.StatusCode);
                 }
             }
+        });
+
+    Target Test => _ => _
+        .DependsOn(Compile)
+        .Executes(() =>
+        {
+            EnsureCleanDirectory(CoverageDirectory);
+            var path = RootDirectory / "nuke-sandbox-tests" / "bin" / Configuration / "net6.0" / "nuke-sandbox-tests.dll";
+            Coverlet(s => s
+                .SetTarget("dotnet")
+                .SetTargetArgs("test --no-build --no-restore")
+                .SetAssembly(path)
+                .SetThreshold(75)
+                .SetOutput(CoverageDirectory / "opencover.xml")
+                .SetFormat(CoverletOutputFormat.opencover));
+        });
+
+    Target Report => _ => _
+        .DependsOn(Test)
+        .AssuredAfterFailure()
+        .Executes(() =>
+        {
+            EnsureCleanDirectory(ReportDirectory);
+            ReportGenerator(s => s
+                    .SetTargetDirectory(ReportDirectory)
+                    .SetFramework("net6.0")
+                    .SetReportTypes(new ReportTypes[] { ReportTypes.Html })
+                    .SetReports(CoverageDirectory / "opencover.xml"));
         });
 
 }
