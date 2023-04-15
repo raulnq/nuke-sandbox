@@ -113,7 +113,8 @@
           "type": "string"
         },
         "WebAppPassword": {
-          "type": "string"
+          "type": "string",
+          "default": "Secrets must be entered via 'nuke :secrets [profile]'"
         },
         "WebAppUser": {
           "type": "string"
