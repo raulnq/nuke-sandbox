@@ -9,14 +9,17 @@
 #
 #     - To trigger manual generation invoke:
 #
-#         nuke --generate-configuration GitHubActions_continuous --host GitHubActions
+#         nuke --generate-configuration GitHubActions_compile --host GitHubActions
 #
 # </auto-generated>
 # ------------------------------------------------------------------------------
 
-name: continuous
+name: compile
 
-on: [push]
+on:
+  push:
+    branches:
+      - main
 
 jobs:
   ubuntu-latest:
@@ -31,5 +34,5 @@ jobs:
             .nuke/temp
             ~/.nuget/packages
           key: ${{ runner.os }}-${{ hashFiles('**/global.json', '**/*.csproj') }}
-      - name: Run './build.cmd '
-        run: ./build.cmd 
+      - name: Run './build.cmd Compile'
+        run: ./build.cmd Compile

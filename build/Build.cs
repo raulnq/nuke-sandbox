@@ -1,42 +1,30 @@
 using System;
 using System.IO;
 using System.IO.Compression;
-using System.Linq;
 using System.Net.Http;
 using System.Text;
 using Nuke.Common;
-using Nuke.Common.CI;
 using Nuke.Common.CI.GitHubActions;
-using Nuke.Common.Execution;
 using Nuke.Common.IO;
 using Nuke.Common.ProjectModel;
-using Nuke.Common.Tooling;
 using Nuke.Common.Tools.DotNet;
-using Nuke.Common.Utilities.Collections;
-using static Nuke.Common.EnvironmentInfo;
 using static Nuke.Common.IO.FileSystemTasks;
-using static Nuke.Common.IO.PathConstruction;
 using static Nuke.Common.Tools.DotNet.DotNetTasks;
 
 [GitHubActions(
-    "continuous",
+    "compile",
     GitHubActionsImage.UbuntuLatest,
-    On = new[] { GitHubActionsTrigger.Push },
-    AutoGenerate = false)]
+    OnPushBranches = new[] { "main" },
+    InvokedTargets = new[] { nameof(Compile) })]
 [GitHubActions(
     "deploy",
     GitHubActionsImage.UbuntuLatest,
     On = new[] { GitHubActionsTrigger.WorkflowDispatch },
     InvokedTargets = new[] { nameof(Deploy) },
-    ImportSecrets = new[] { nameof(WebAppPassword)})]
+    ImportSecrets = new[] { nameof(WebAppPassword)},
+    AutoGenerate = false)]
 class Build : NukeBuild
 {
-    /// Support plugins are available for:
-    ///   - JetBrains ReSharper        https://nuke.build/resharper
-    ///   - JetBrains Rider            https://nuke.build/rider
-    ///   - Microsoft VisualStudio     https://nuke.build/visualstudio
-    ///   - Microsoft VSCode           https://nuke.build/vscode
-
     public static int Main() => Execute<Build>(x => x.Compile);
 
     [Parameter("Configuration to build - Default is 'Debug' (local) or 'Release' (server)")]
@@ -52,7 +40,6 @@ class Build : NukeBuild
     public string WebAppUser;
 
     [Parameter()]
-    [Secret]
     public string WebAppPassword;
 
     [Parameter]
@@ -111,7 +98,6 @@ class Build : NukeBuild
         .Requires(() => WebAppName)
         .Executes(async () =>
         {
-            Serilog.Log.Information(WebAppUser);
             var base64Auth = Convert.ToBase64String(Encoding.Default.GetBytes($"{WebAppUser}:{WebAppPassword}"));
             using (var memStream = new MemoryStream(File.ReadAllBytes(ArtifactDirectory / "deployment.zip")))
             {
@@ -128,5 +114,4 @@ class Build : NukeBuild
                 }
             }
         });
-
 }
