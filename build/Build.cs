@@ -6,6 +6,7 @@ using System.Net.Http;
 using System.Text;
 using Nuke.Common;
 using Nuke.Common.CI;
+using Nuke.Common.CI.GitHubActions;
 using Nuke.Common.Execution;
 using Nuke.Common.IO;
 using Nuke.Common.ProjectModel;
@@ -17,7 +18,17 @@ using static Nuke.Common.IO.FileSystemTasks;
 using static Nuke.Common.IO.PathConstruction;
 using static Nuke.Common.Tools.DotNet.DotNetTasks;
 
-[CheckBuildProjectConfigurations]
+[GitHubActions(
+    "continuous",
+    GitHubActionsImage.UbuntuLatest,
+    On = new[] { GitHubActionsTrigger.Push },
+    AutoGenerate = false)]
+[GitHubActions(
+    "deploy",
+    GitHubActionsImage.UbuntuLatest,
+    On = new[] { GitHubActionsTrigger.WorkflowDispatch },
+    InvokedTargets = new[] { nameof(Deploy) },
+    ImportSecrets = new[] { nameof(WebAppPassword)})]
 class Build : NukeBuild
 {
     /// Support plugins are available for:
@@ -41,6 +52,7 @@ class Build : NukeBuild
     public string WebAppUser;
 
     [Parameter()]
+    [Secret]
     public string WebAppPassword;
 
     [Parameter]
@@ -86,6 +98,7 @@ class Build : NukeBuild
 
     Target Zip => _ => _
         .DependsOn(Publish)
+        .Produces(ArtifactDirectory / "*.zip")
         .Executes(() =>
         {
             ZipFile.CreateFromDirectory(OutputDirectory, ArtifactDirectory / "deployment.zip");
