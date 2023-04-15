@@ -34,10 +34,9 @@ jobs:
       - name: Run './build.cmd Deploy'
         run: ./build.cmd Deploy
         env:
-            ConnectionString: ${{ secrets.CONNECTION_STRING }}
-            WebAppUser: $nuke-demo
-            WebAppPassword: ${{ secrets.APP_PASSWORD }}
-            WebAppName: nuke-demo
+            WebAppPassword: ${{ secrets.WEB_APP_PASSWORD }}
+            WebAppUser: $nuke-sandbox-app
+            WebAppName: nuke-sandbox-app
       - uses: actions/upload-artifact@v1
         with:
           name: artifact
